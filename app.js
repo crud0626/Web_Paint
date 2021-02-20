@@ -5,6 +5,7 @@ const range = document.getElementById("jsRange");
 const mode = document.getElementById("jsMode");
 const saveBtn = document.getElementById("jsSave");
 const clearBtn = document.getElementById("jsClear");
+const eraserBtn = document.getElementById("jseraser");
 
 // Default Value
 const INITIAL_COLOR = "#2c2c2c"
@@ -16,12 +17,16 @@ canvas.height = CANVAS_SIZE;
 ctx.fillStyle = "white";
 ctx.fillRect(0, 0, canvas.width, canvas.height);
 ctx.strokeStyle = INITIAL_COLOR;
-ctx.fillStyle = INITIAL_COLOR;
 ctx.lineWidth = 2.5;
 
+let colorStorage;
+
+// 각 기능 on/off
 let painting = false;
 let filling = false;
 let clearing = false;
+let erasing = false;
+
 
 function stopPainting() {
     painting = false;
@@ -31,35 +36,51 @@ function startPainting() {
     painting = true;
 }
 
+// Eraser Function
+function changeErasing() {
+    if(erasing) {
+        erasing = false;
+        ctx.strokeStyle = colorStorage;
+        ctx.lineWidth = ctx.lineWidth / 4;
+        colorStorage = undefined;
+    } else {
+        colorStorage = ctx.strokeStyle;
+        erasing = true;
+        getErase();
+    }
+}
+
+// Painting Function
 function onMouseMove(event) {
     const x = event.offsetX;
     const y = event.offsetY;
     if(!painting) {
         ctx.beginPath();
         ctx.moveTo(x, y);
-        // 눈에 보이지 않을 뿐 여기서도 선을 그리고는 있다.
-        // 선을 그린다기 보다 마우스가 움직일때마다 x y 픽셀값을 계속 받아옴
-
     } else {
         ctx.lineTo(x, y);
         ctx.stroke();
     }
 }
 
+// Background Color Function
 function handleColorClick(event) {
     const color = event.target.style.backgroundColor;
-    ctx.strokeStyle = color;
     if (filling) {
         ctx.fillStyle = color;
         handleCanvasClick();
+    } else {
+        ctx.strokeStyle = color;
     }
 }
 
+// Range
 function handleRangeChange(event) {
     const value = event.target.value;
     ctx.lineWidth = value;
 }
 
+// Fill & Paint on/off
 function handleModeClick() {
     if (filling) {
         filling = false;
@@ -70,16 +91,19 @@ function handleModeClick() {
     }
 }
 
+// Fill Function
 function handleCanvasClick() {
     if(filling) {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 }
 
+// Prevent right click
 function handleCM(event) {
     event.preventDefault();
 }
 
+// Save Function
 function handleSaveClick() {
     const image = canvas.toDataURL("image/png");
     const link = document.createElement("a");
@@ -88,13 +112,22 @@ function handleSaveClick() {
     link.click();
 }
 
+// Clear Function
 function getClear() {
     ctx.fillStyle = "white";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.strokeStyle = INITIAL_COLOR;
-    ctx.fillStyle = INITIAL_COLOR;
     ctx.lineWidth = 2.5;
     range.value = 2.5;
+    erasing = false;
+    console.log(ctx.strokeStyle);
+}
+
+// Eraser Function value
+function getErase() {
+    ctx.strokeStyle = ctx.fillStyle;
+    ctx.lineWidth = ctx.lineWidth * 4;
+    console.log(ctx.strokeStyle);
 }
 
 if (canvas) {
@@ -102,15 +135,12 @@ if (canvas) {
     canvas.addEventListener("mousedown", startPainting);
     canvas.addEventListener("mouseup", stopPainting);
     canvas.addEventListener("mouseleave", stopPainting);
-    // canvas.addEventListener("click", handleCanvasClick);
-    // 삭제예정
     canvas.addEventListener("contextmenu", handleCM)
 }
 
 Array.from(colors).forEach((color) => 
     color.addEventListener("click", handleColorClick)
 );
-// handlecolorclick함수에 ()를 붙였었음.
 
 if (range) {
     range.addEventListener("input", handleRangeChange)
@@ -124,4 +154,9 @@ if (saveBtn) {
     saveBtn.addEventListener("click", handleSaveClick)
 }
 
+if (erasing) {
+    canvas.addEventListener("mousemove", onMouseMove);
+}
+
+eraserBtn.addEventListener("click", changeErasing);
 clearBtn.addEventListener("click", getClear);
