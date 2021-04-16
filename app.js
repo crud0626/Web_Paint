@@ -2,13 +2,16 @@ const canvas = document.getElementById("jsCanvas");
 const ctx = canvas.getContext("2d");
 const colors = document.getElementsByClassName("jsColor");
 const range = document.getElementById("jsRange");
-const mode = document.getElementById("jsMode");
+const modeBtn = document.getElementById("jsMode");
 const saveBtn = document.getElementById("jsSave");
 const clearBtn = document.getElementById("jsClear");
-const eraserBtn = document.getElementById("jseraser");
+const eraserBtn = document.getElementById("jsEraser");
+const popBtns = document.querySelectorAll('.popBtn');
+const normalBtns = document.querySelectorAll('.normalBtn');
+let colorStorage;
 
 // Default Value
-const INITIAL_COLOR = "#2c2c2c"
+const INITIAL_COLOR = "#2c2c2c";
 const CANVAS_SIZE = 700;
 
 canvas.width = CANVAS_SIZE;
@@ -19,38 +22,50 @@ ctx.fillRect(0, 0, canvas.width, canvas.height);
 ctx.strokeStyle = INITIAL_COLOR;
 ctx.lineWidth = 2.5;
 
-let colorStorage;
-
-// 각 기능 on/off
+// Fuction Value
 let painting = false;
 let filling = false;
 let clearing = false;
 let erasing = false;
 
-
-function stopPainting() {
-    painting = false;
+// Event Listener
+if (canvas) {
+    canvas.addEventListener("mousemove", onMouseMove);
+    canvas.addEventListener("mousedown", handlePainting);
+    canvas.addEventListener("mouseup", handlePainting);
+    canvas.addEventListener("mouseleave", handlePainting);
+    canvas.addEventListener("contextmenu", handleCM);
 }
 
-function startPainting() {
-    painting = true;
+if (range) {
+    range.addEventListener("input", handleRangeChange);
 }
 
-// Eraser Function
-function changeErasing() {
-    if(erasing) {
-        erasing = false;
-        ctx.strokeStyle = colorStorage;
-        ctx.lineWidth = ctx.lineWidth / 4;
-        colorStorage = undefined;
-    } else {
-        colorStorage = ctx.strokeStyle;
-        erasing = true;
-        getErase();
-    }
+if (saveBtn) {
+    saveBtn.addEventListener("click", handleSaveClick);
+
 }
 
-// Painting Function
+if (erasing) {
+    canvas.addEventListener("mousemove", onMouseMove);
+}
+
+Array.from(colors).forEach((color) => 
+    color.addEventListener("click", handleColorClick);
+);
+
+clearBtn.addEventListener("click", initValue);
+
+popBtns.forEach((btn) => {
+    btn.addEventListener('mousedown', (event) => popBgColor(event));
+    btn.addEventListener('mouseup', (event) => popBgColor(event));
+})
+
+normalBtns.forEach((btn) => {
+    btn.addEventListener('click', changeBtnState);
+});
+
+// Function
 function onMouseMove(event) {
     const x = event.offsetX;
     const y = event.offsetY;
@@ -63,7 +78,6 @@ function onMouseMove(event) {
     }
 }
 
-// Background Color Function
 function handleColorClick(event) {
     const color = event.target.style.backgroundColor;
     if (filling) {
@@ -74,36 +88,29 @@ function handleColorClick(event) {
     }
 }
 
-// Range
-function handleRangeChange(event) {
-    const value = event.target.value;
-    ctx.lineWidth = value;
-}
-
-// Fill & Paint on/off
-function handleModeClick() {
-    if (filling) {
-        filling = false;
-        mode.innerText = "Fill";
-    } else {
-        filling = true;
-        mode.innerText = "Paint";
-    }
-}
-
-// Fill Function
 function handleCanvasClick() {
     if(filling) {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 }
 
-// Prevent right click
+function handleRangeChange(event) {
+    const value = event.target.value;
+    ctx.lineWidth = value;
+}
+
+function handleModeClick() {
+    if (filling) {
+        modeBtn.innerText = "Fill";
+    } else {
+        modeBtn.innerText = "Paint";
+    }
+}
+
 function handleCM(event) {
     event.preventDefault();
 }
 
-// Save Function
 function handleSaveClick() {
     const image = canvas.toDataURL("image/png");
     const link = document.createElement("a");
@@ -112,51 +119,73 @@ function handleSaveClick() {
     link.click();
 }
 
-// Clear Function
-function getClear() {
+function initValue() {
     ctx.fillStyle = "white";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.strokeStyle = INITIAL_COLOR;
     ctx.lineWidth = 2.5;
     range.value = 2.5;
     erasing = false;
-    console.log(ctx.strokeStyle);
 }
 
-// Eraser Function value
-function getErase() {
-    ctx.strokeStyle = ctx.fillStyle;
-    ctx.lineWidth = ctx.lineWidth * 4;
-    console.log(ctx.strokeStyle);
+function handlePainting(event) {
+    switch(event.type) {
+        case 'mousedown':
+            painting = true;
+        break;
+        case 'mouseup':
+        case 'mouseleave':
+            painting = false;
+        break;
+        default:
+            alert('Error! Please try to click Refresh(F5) button.');
+    }
 }
 
-if (canvas) {
-    canvas.addEventListener("mousemove", onMouseMove);
-    canvas.addEventListener("mousedown", startPainting);
-    canvas.addEventListener("mouseup", stopPainting);
-    canvas.addEventListener("mouseleave", stopPainting);
-    canvas.addEventListener("contextmenu", handleCM)
+function changeErasing() {
+    if(erasing) {
+        ctx.strokeStyle = colorStorage;
+        ctx.lineWidth = ctx.lineWidth / 4;
+        colorStorage = null;
+        erasing = false;
+        eraserBtn.style.backgroundColor = 'white';
+        console.log('erasing change to false!');
+        console.log(erasing);
+    } else {
+        colorStorage = ctx.strokeStyle;
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.lineWidth = ctx.lineWidth * 4;
+        if (filling) {
+            handleModeClick();
+        }
+        erasing = true;
+        filling = false;
+        eraserBtn.style.backgroundColor = '#a4ebf3';
+        modeBtn.style.backgroundColor = 'white';
+        console.log('erasing change to true!');
+        console.log(erasing);
+    }
 }
 
-Array.from(colors).forEach((color) => 
-    color.addEventListener("click", handleColorClick)
-);
-
-if (range) {
-    range.addEventListener("input", handleRangeChange)
+function changeBtnState(event) {
+    let id = event.target.id;
+    switch(id) {
+        case 'jsEraser':
+            changeErasing();
+            break;
+        case 'jsMode':
+            handleModeClick();
+            if(filling) {
+                filling = false;
+                modeBtn.style.backgroundColor = 'white';
+            } else {
+                filling = true;
+                erasing = false;
+                eraserBtn.style.backgroundColor = 'white';
+                modeBtn.style.backgroundColor = '#a4ebf3';
+            }
+            break;
+        default:
+            alert('Error! Please try to click Refresh(F5) button.')
+    }
 }
-
-if (mode) {
-    mode.addEventListener("click", handleModeClick)
-}
-
-if (saveBtn) {
-    saveBtn.addEventListener("click", handleSaveClick)
-}
-
-if (erasing) {
-    canvas.addEventListener("mousemove", onMouseMove);
-}
-
-eraserBtn.addEventListener("click", changeErasing);
-clearBtn.addEventListener("click", getClear);
